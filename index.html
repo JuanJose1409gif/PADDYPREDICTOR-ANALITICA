@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Paddy Yield Predictor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="noise"></div>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🌽</span>
+        <span class="logo-text">PADDY<b>PREDICTOR</b></span>
+      </div>
+      <nav>
+        <a href="individual.html" class="nav-link">Predicción Individual</a>
+        <a href="lotes.html" class="nav-link">Predicción por Lotes</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="hero">
+  
+    <h1 class="hero-title">
+      Predictor de<br>
+      <span class="accent">Rendimiento</span><br>
+      de Arroz
+    </h1>
+    <p class="hero-desc">
+      Dos modelos de Machine Learning — Regresión Logística y Red Neuronal Artificial —
+      entrenados con <strong>2,789 registros</strong> agrícolas para predecir si una parcela
+      tendrá rendimiento <em>alto o bajo</em> de arroz (Paddy).
+    </p>
+
+    <div class="cards">
+      <a href="individual.html" class="card card-individual">
+        <div class="card-number">01</div>
+        <div class="card-content">
+          <h2>Predicción Individual</h2>
+          <p>Ingresa los datos de una parcela y obtén la predicción al instante con el modelo de tu elección.</p>
+          <span class="card-cta">Ir →</span>
+        </div>
+      </a>
+      <a href="lotes.html" class="card card-lotes">
+        <div class="card-number">02</div>
+        <div class="card-content">
+          <h2>Predicción por Lotes</h2>
+          <p>Sube un archivo CSV con múltiples registros y obtén métricas de desempeño y la matriz de confusión.</p>
+          <span class="card-cta">Ir →</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="metrics-strip">
+      <div class="metric">
+        <span class="metric-val">91.2%</span>
+        <span class="metric-label">Accuracy · Reg. Logística</span>
+      </div>
+      <div class="metric-sep"></div>
+      <div class="metric">
+        <span class="metric-val">90.7%</span>
+        <span class="metric-label">Accuracy · Red Neuronal</span>
+      </div>
+      <div class="metric-sep"></div>
+      <div class="metric">
+        <span class="metric-val">2,789</span>
+        <span class="metric-label">Registros de entrenamiento</span>
+      </div>
+      <div class="metric-sep"></div>
+      <div class="metric">
+        <span class="metric-val">44</span>
+        <span class="metric-label">Variables predictoras</span>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>Paddy Yield Predictor · Dataset: Paddy Cultivation · Modelo de clasificación binaria</span>
+  </footer>
+
+  <script src="models/model.js"></script>
+</body>
+</html>

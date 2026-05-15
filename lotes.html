@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Predicción por Lotes · PaddyAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .results-panel { margin-top: 2rem; }
+    .panel-title {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.25rem;
+    }
+    .cm-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .model-tag {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.75rem;
+      border-radius: 2px;
+      display: inline-block;
+      margin-bottom: 1.25rem;
+    }
+    .tag-lr { background: rgba(181,242,58,0.15); color: var(--accent); }
+    .tag-nn { background: rgba(242,226,58,0.15); color: var(--accent2); }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media(max-width:800px){ .compare-grid { grid-template-columns: 1fr; } }
+
+    .preview-table-wrap {
+      overflow-x: auto;
+      max-height: 280px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .preview-table {
+      width: 100%; border-collapse: collapse;
+      font-family: var(--font-mono); font-size: 0.72rem;
+    }
+    .preview-table th {
+      background: var(--surface2);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      position: sticky; top: 0;
+    }
+    .preview-table td {
+      padding: 0.45rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .badge-high { color: var(--accent); font-weight: 700; }
+    .badge-low { color: var(--danger); font-weight: 700; }
+    .badge-correct { background: rgba(181,242,58,0.15); }
+    .badge-wrong { background: rgba(242,90,58,0.1); }
+
+    .info-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent2);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+<div class="noise"></div>
+
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-icon">🌽</span>
+      <span class="logo-text">PADDY<b>PREDICTOR</b></span>
+    </a>
+    <nav>
+      <a href="individual.html" class="nav-link">Predicción Individual</a>
+      <a href="lotes.html" class="nav-link active">Predicción por Lotes</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-header">
+  <h1>Predicción por <span class="accent">Lotes</span></h1>
+  <p>Sube un CSV con múltiples registros y compara ambos modelos con matriz de confusión y métricas de desempeño.</p>
+</div>
+
+<div class="page-content">
+
+  <!-- Model Selector -->
+  <span class="section-label">Selecciona el modelo a evaluar</span>
+  <div class="model-selector" style="margin-bottom:2rem">
+    <button class="model-btn active" id="btnLR" onclick="selectModel('lr')">📈 Regresión Logística</button>
+    <button class="model-btn" id="btnNN" onclick="selectModel('nn')">🧠 Red Neuronal Artificial</button>
+    <button class="model-btn" id="btnBoth" onclick="selectModel('both')">⚡ Comparar ambos</button>
+  </div>
+
+  <!-- Info note -->
+  <div class="info-note">
+    ℹ️ El CSV debe tener las mismas columnas que el dataset original (paddydataset.csv).
+    Si incluye la columna <strong>Paddy yield(in Kg)</strong>, se calculará automáticamente el target
+    (rendimiento alto = ≥ mediana de 24,636 Kg) y se mostrarán las métricas de desempeño.
+    Si no incluye la columna de rendimiento, se mostrarán solo las predicciones.
+  </div>
+
+  <!-- Upload Zone -->
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+       ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+    <div class="upload-icon"></div>
+    <h3>Arrastra tu archivo CSV aquí</h3>
+    <p>o haz clic para seleccionar · Solo archivos .csv</p>
+    <input type="file" id="fileInput" accept=".csv" onchange="handleFile(event)"/>
+  </div>
+
+  <!-- Use demo dataset -->
+  <div style="text-align:center; margin-bottom:2rem">
+    <button class="predict-btn" onclick="loadDemo()" style="max-width:400px;display:inline-block">
+       Usar dataset de demostración (100 registros)
+    </button>
+  </div>
+
+  <!-- Results -->
+  <div id="resultsPanel" class="results-panel" style="display:none">
+
+    <div id="previewSection" style="margin-bottom:2rem">
+      <div class="panel-title" id="previewTitle"></div>
+      <div class="preview-table-wrap" id="previewTable"></div>
+    </div>
+
+    <div id="metricsSection" style="display:none">
+      <div class="panel-title">Métricas de Desempeño</div>
+      <div class="compare-grid" id="cmGrid"></div>
+      <div id="metricsTable"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<footer>
+  <span>Paddy Yield Predictor · Predicción por Lotes</span>
+</footer>
+
+<script src="models/model_data.js"></script>
+<script src="models/model.js"></script>
+<script>
+  let currentModel = 'lr';
+  let loadedRows = [];
+
+  function selectModel(m) {
+    currentModel = m;
+    ['lr','nn','both'].forEach(id => {
+      document.getElementById('btn' + id.charAt(0).toUpperCase() + id.slice(1))
+        .classList.toggle('active', m === id);
+    });
+    if (loadedRows.length > 0) renderResults(loadedRows);
+  }
+
+  // ===== FILE HANDLING =====
+  function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag'); }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('uploadZone').classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) parseCSV(file);
+  }
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (file) parseCSV(file);
+  }
+
+  function parseCSV(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const rows = csvToRows(text);
+      loadedRows = rows;
+      renderResults(rows);
+    };
+    reader.readAsText(file);
+  }
+
+  function csvToRows(text) {
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().replace(/\r/g,''));
+    return lines.slice(1).map(line => {
+      const vals = line.split(',').map(v => v.trim().replace(/\r/g,''));
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = vals[i] || '');
+      return obj;
+    }).filter(r => Object.values(r).some(v => v));
+  }
+
+  function loadDemo() {
+    // Use first 100 rows equivalent - we'll build sample data from the model scaler mean
+    // Just load the dataset as-is with a note
+    const sampleRows = buildSampleRows(100);
+    loadedRows = sampleRows;
+    renderResults(sampleRows);
+  }
+
+  function buildSampleRows(n) {
+    // Build realistic demo rows from the categorical options and numeric means
+    const agriblocks = ['Chinnasalem','Cuddalore','Kallakurichi','Kurinjipadi','Panruti'];
+    const varieties = ['CO_43','delux ponni','ponmani'];
+    const soils = ['alluvial','clay'];
+    const nurseries = ['dry','wet'];
+    const windDirs1 = ['SW','E','ENE','NW','SSE'];
+    const windDirs2 = ['ENE','NE','S','W','WNW'];
+    const windDirs3 = ['NE','NNE','NNW','SE','SW'];
+    const windDirs4 = ['NNW','NW','S','SSE','W','WSW'];
+    const rows = [];
+    // Seed simple LCG for reproducible demo
+    let seed = 42;
+    function rand() { seed = (seed * 1664525 + 1013904223) & 0x7fffffff; return seed / 0x7fffffff; }
+    function rnd(min, max) { return +(min + rand() * (max - min)).toFixed(1); }
+    function pick(arr) { return arr[Math.floor(rand() * arr.length)]; }
+
+    for (let i = 0; i < n; i++) {
+      const yieldKg = rnd(8000, 38000);
+      rows.push({
+        'Hectares': rnd(1,6),
+        'Agriblock': pick(agriblocks),
+        'Variety': pick(varieties),
+        'Soil Types': pick(soils),
+        'Seedrate(in Kg)': rnd(25,150),
+        'LP_Mainfield(in Tonnes)': rnd(40,100),
+        'Nursery': pick(nurseries),
+        'Nursery area (Cents)': rnd(20,120),
+        'LP_nurseryarea(in Tonnes)': rnd(2,10),
+        'DAP_20days': rnd(100,400),
+        'Weed28D_thiobencarb': rnd(6,20),
+        'Urea_40Days': rnd(100,250),
+        'Potassh_50Days': rnd(40,100),
+        'Micronutrients_70Days': rnd(50,150),
+        'Pest_60Day(in ml)': rnd(2000,6000),
+        '30DRain( in mm)': rnd(5,50),
+        '30DAI(in mm)': rnd(5,50),
+        '30_50DRain( in mm)': rnd(100,300),
+        '30_50DAI(in mm)': rnd(150,350),
+        '51_70DRain(in mm)': rnd(80,250),
+        '51_70AI(in mm)': rnd(100,300),
+        '71_105DRain(in mm)': rnd(30,100),
+        '71_105DAI(in mm)': rnd(30,100),
+        'Min temp_D1_D30': rnd(16,22),
+        'Max temp_D1_D30': rnd(28,37),
+        'Min temp_D31_D60': rnd(14,20),
+        'Max temp_D31_D60': rnd(26,36),
+        'Min temp_D61_D90': rnd(13,19),
+        'Max temp_D61_D90': rnd(27,35),
+        'Min temp_D91_D120': rnd(14,20),
+        'Max temp_D91_D120': rnd(28,36),
+        'Inst Wind Speed_D1_D30(in Knots)': rnd(2,15),
+        'Inst Wind Speed_D31_D60(in Knots)': rnd(2,15),
+        'Inst Wind Speed_D61_D90(in Knots)': rnd(2,15),
+        'Inst Wind Speed_D91_D120(in Knots)': rnd(2,15),
+        'Wind Direction_D1_D30': pick(windDirs1),
+        'Wind Direction_D31_D60': pick(windDirs2),
+        'Wind Direction_D61_D90': pick(windDirs3),
+        'Wind Direction_D91_D120': pick(windDirs4),
+        'Relative Humidity_D1_D30': rnd(55,95),
+        'Relative Humidity_D31_D60': rnd(60,98),
+        'Relative Humidity_D61_D90': rnd(65,98),
+        'Relative Humidity_D91_D120': rnd(60,95),
+        'Trash(in bundles)': rnd(300,700),
+        'Paddy yield(in Kg)': yieldKg
+      });
+    }
+    return rows;
+  }
+
+  // ===== RENDER =====
+  function renderResults(rows) {
+    document.getElementById('resultsPanel').style.display = 'block';
+
+    const hasTarget = rows.length > 0 && rows[0]['Paddy yield(in Kg)'] !== undefined;
+
+    // Compute predictions
+    const modelsToRun = currentModel === 'both' ? ['lr','nn'] : [currentModel];
+    const predictions = {};
+    modelsToRun.forEach(m => {
+      predictions[m] = rows.map(r => {
+        const res = predict(r, m);
+        let target = -1;
+        if (hasTarget) {
+          const y = parseFloat(r['Paddy yield(in Kg)']);
+          target = y >= MODEL_DATA.median_yield ? 1 : 0;
+        }
+        return { ...res, target };
+      });
+    });
+
+    // Preview table
+    const displayRows = rows.slice(0, 50);
+    const previewTitle = document.getElementById('previewTitle');
+    previewTitle.textContent = `Predicciones · ${rows.length} registros ${rows.length > 50 ? '(mostrando primeros 50)' : ''}`;
+
+    let tableHTML = `<table class="preview-table"><thead><tr>
+      <th>#</th><th>Zona</th><th>Variedad</th><th>Suelo</th>`;
+    if (hasTarget) tableHTML += `<th>Rendimiento real</th>`;
+    modelsToRun.forEach(m => {
+      const label = m === 'lr' ? 'Reg. Logística' : 'Red Neuronal';
+      tableHTML += `<th>${label}</th><th>P(alto)</th>`;
+      if (hasTarget) tableHTML += `<th>✓?</th>`;
+    });
+    tableHTML += `</tr></thead><tbody>`;
+
+    displayRows.forEach((row, i) => {
+      const rowClass = hasTarget ? (modelsToRun.every(m => predictions[m][i].pred === predictions[m][i].target) ? 'badge-correct' : 'badge-wrong') : '';
+      tableHTML += `<tr class="${rowClass}"><td>${i+1}</td>
+        <td>${row['Agriblock'] || '—'}</td>
+        <td>${row['Variety'] || '—'}</td>
+        <td>${row['Soil Types'] || '—'}</td>`;
+
+      if (hasTarget) {
+        const t = predictions[modelsToRun[0]][i].target;
+        tableHTML += `<td class="${t===1?'badge-high':'badge-low'}">${t===1?'ALTO':'BAJO'}</td>`;
+      }
+
+      modelsToRun.forEach(m => {
+        const p = predictions[m][i];
+        const correct = hasTarget ? p.pred === p.target : null;
+        tableHTML += `<td class="${p.pred===1?'badge-high':'badge-low'}">${p.pred===1?'ALTO':'BAJO'}</td>
+          <td>${(p.prob*100).toFixed(1)}%</td>`;
+        if (hasTarget) tableHTML += `<td>${correct ? '✓' : '✗'}</td>`;
+      });
+      tableHTML += `</tr>`;
+    });
+    tableHTML += `</tbody></table>`;
+    document.getElementById('previewTable').innerHTML = tableHTML;
+
+    // Metrics (only if target is available)
+    const metricsSection = document.getElementById('metricsSection');
+    if (hasTarget) {
+      metricsSection.style.display = 'block';
+      const cmGrid = document.getElementById('cmGrid');
+      let cmHTML = '';
+      modelsToRun.forEach(m => {
+        const preds = predictions[m].map(p => p.pred);
+        const targets = predictions[m].map(p => p.target).filter(t => t !== -1);
+        const predsFiltered = predictions[m].filter(p => p.target !== -1).map(p => p.pred);
+
+        let tp=0,tn=0,fp=0,fn=0;
+        targets.forEach((t,i) => {
+          const p = predsFiltered[i];
+          if(t===1&&p===1)tp++; else if(t===0&&p===0)tn++;
+          else if(t===0&&p===1)fp++; else fn++;
+        });
+        const total = tp+tn+fp+fn;
+        const acc = total>0?((tp+tn)/total*100).toFixed(1):0;
+        const prec = (tp+fp)>0?(tp/(tp+fp)*100).toFixed(1):0;
+        const rec = (tp+fn)>0?(tp/(tp+fn)*100).toFixed(1):0;
+        const f1p = parseFloat(prec), f1r = parseFloat(rec);
+        const f1 = (f1p+f1r)>0?(2*f1p*f1r/(f1p+f1r)).toFixed(1):0;
+
+        const tagCls = m==='lr'?'tag-lr':'tag-nn';
+        const label = m==='lr'?'Regresión Logística':'Red Neuronal Artificial';
+
+        cmHTML += `<div class="cm-block">
+          <span class="model-tag ${tagCls}">${label}</span>
+          <div class="panel-title">Matriz de Confusión</div>
+          <div class="matrix-grid">
+            <div class="matrix-cell header"></div>
+            <div class="matrix-cell header">Pred BAJO</div>
+            <div class="matrix-cell header">Pred ALTO</div>
+            <div class="matrix-cell header">Real BAJO</div>
+            <div class="matrix-cell tn"><span class="matrix-val">${tn}</span><span class="matrix-lbl">TN</span></div>
+            <div class="matrix-cell fp"><span class="matrix-val">${fp}</span><span class="matrix-lbl">FP</span></div>
+            <div class="matrix-cell header">Real ALTO</div>
+            <div class="matrix-cell fn"><span class="matrix-val">${fn}</span><span class="matrix-lbl">FN</span></div>
+            <div class="matrix-cell tp"><span class="matrix-val">${tp}</span><span class="matrix-lbl">TP</span></div>
+          </div>
+          <table class="metrics-table" style="margin-top:1.5rem">
+            <thead><tr><th>Métrica</th><th>Valor</th></tr></thead>
+            <tbody>
+              <tr><td>Accuracy</td><td class="val-accent">${acc}%</td></tr>
+              <tr><td>Precisión</td><td class="val-accent">${prec}%</td></tr>
+              <tr><td>Recall (Sensibilidad)</td><td class="val-accent">${rec}%</td></tr>
+              <tr><td>F1-Score</td><td class="val-accent">${f1}%</td></tr>
+              <tr><td>Total registros evaluados</td><td>${total}</td></tr>
+            </tbody>
+          </table>
+        </div>`;
+      });
+      cmGrid.innerHTML = cmHTML;
+
+      // Overall comparison if both
+      if (currentModel === 'both') {
+        document.getElementById('metricsTable').innerHTML = `
+          <div class="panel-title" style="margin-top:1rem">Comparación de modelos (entrenamiento completo)</div>
+          <table class="metrics-table">
+            <thead><tr><th>Métrica</th><th>Reg. Logística</th><th>Red Neuronal</th></tr></thead>
+            <tbody>
+              <tr><td>Accuracy (dataset completo)</td><td class="val-accent">${MODEL_DATA.lr_metrics.accuracy}%</td><td class="val-accent">${MODEL_DATA.nn_metrics.accuracy}%</td></tr>
+              <tr><td>Precisión</td><td>${MODEL_DATA.lr_metrics.precision}%</td><td>${MODEL_DATA.nn_metrics.precision}%</td></tr>
+              <tr><td>Recall</td><td>${MODEL_DATA.lr_metrics.recall}%</td><td>${MODEL_DATA.nn_metrics.recall}%</td></tr>
+              <tr><td>F1-Score</td><td>${MODEL_DATA.lr_metrics.f1}%</td><td>${MODEL_DATA.nn_metrics.f1}%</td></tr>
+            </tbody>
+          </table>`;
+      } else {
+        document.getElementById('metricsTable').innerHTML = '';
+      }
+    } else {
+      metricsSection.style.display = 'none';
+    }
+
+    document.getElementById('resultsPanel').scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>

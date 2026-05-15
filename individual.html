@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Predicción Individual · PaddyAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="noise"></div>
+
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-icon">🌽</span>
+      <span class="logo-text">PADDY<b>PREDICTOR</b></span>
+    </a>
+    <nav>
+      <a href="individual.html" class="nav-link active">Predicción Individual</a>
+      <a href="lotes.html" class="nav-link">Predicción por Lotes</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-header">
+  <h1>Predicción <span class="accent">Individual</span></h1>
+  <p>Ingresa los datos de una parcela para predecir si tendrá rendimiento alto o bajo de arroz.</p>
+</div>
+
+<div class="page-content">
+
+  <!-- Model Selector -->
+  <div style="margin-bottom:1rem">
+    <span class="section-label">Selecciona el modelo</span>
+  </div>
+  <div class="model-selector">
+    <button class="model-btn active" id="btnLR" onclick="selectModel('lr')">
+      📈 Regresión Logística
+    </button>
+    <button class="model-btn" id="btnNN" onclick="selectModel('nn')">
+      🧠 Red Neuronal Artificial
+    </button>
+  </div>
+
+  <!-- Form -->
+  <form id="predForm" onsubmit="runPredict(event)">
+
+    <div class="form-section">
+      <div class="form-section-title"> Información de la parcela</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Agriblock (Zona)</label>
+          <select name="Agriblock">
+            <option>Chinnasalem</option><option>Cuddalore</option>
+            <option>Kallakurichi</option><option>Kurinjipadi</option><option>Panruti</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Variedad de arroz</label>
+          <select name="Variety">
+            <option>CO_43</option><option>delux ponni</option><option>ponmani</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tipo de suelo</label>
+          <select name="Soil Types">
+            <option>alluvial</option><option>clay</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tipo de vivero</label>
+          <select name="Nursery">
+            <option>dry</option><option>wet</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Hectáreas</label>
+          <input type="number" name="Hectares" value="4" min="1" max="6" step="0.5"/>
+        </div>
+        <div class="field">
+          <label>Tasa de siembra (Kg)</label>
+          <input type="number" name="Seedrate(in Kg)" value="100" min="25" max="150"/>
+        </div>
+        <div class="field">
+          <label>Área de vivero (Cents)</label>
+          <input type="number" name="Nursery area (Cents)" value="80" min="20" max="120"/>
+        </div>
+        <div class="field">
+          <label>LP Campo principal (Ton)</label>
+          <input type="number" name="LP_Mainfield(in Tonnes)" value="75" step="0.5"/>
+        </div>
+        <div class="field">
+          <label>LP Vivero (Ton)</label>
+          <input type="number" name="LP_nurseryarea(in Tonnes)" value="6"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title"> Insumos agrícolas</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>DAP 20 días</label>
+          <input type="number" name="DAP_20days" value="240"/>
+        </div>
+        <div class="field">
+          <label>Herbicida 28D (thiobencarb)</label>
+          <input type="number" name="Weed28D_thiobencarb" value="12"/>
+        </div>
+        <div class="field">
+          <label>Urea 40 días</label>
+          <input type="number" name="Urea_40Days" value="162.78" step="0.01"/>
+        </div>
+        <div class="field">
+          <label>Potasio 50 días</label>
+          <input type="number" name="Potassh_50Days" value="62.28" step="0.01"/>
+        </div>
+        <div class="field">
+          <label>Micronutrientes 70 días</label>
+          <input type="number" name="Micronutrients_70Days" value="90"/>
+        </div>
+        <div class="field">
+          <label>Pesticida 60 días (ml)</label>
+          <input type="number" name="Pest_60Day(in ml)" value="3600"/>
+        </div>
+        <div class="field">
+          <label>Basura / Trash (bundles)</label>
+          <input type="number" name="Trash(in bundles)" value="540"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title"> Precipitación e irrigación</div>
+      <div class="form-grid">
+        <div class="field"><label>Lluvia D1-30 (mm)</label><input type="number" name="30DRain( in mm)" value="19.6" step="0.1"/></div>
+        <div class="field"><label>Irrig. D1-30 (mm)</label><input type="number" name="30DAI(in mm)" value="20.4" step="0.1"/></div>
+        <div class="field"><label>Lluvia D31-50 (mm)</label><input type="number" name="30_50DRain( in mm)" value="187.2" step="0.1"/></div>
+        <div class="field"><label>Irrig. D31-50 (mm)</label><input type="number" name="30_50DAI(in mm)" value="270.8" step="0.1"/></div>
+        <div class="field"><label>Lluvia D51-70 (mm)</label><input type="number" name="51_70DRain(in mm)" value="167" step="0.1"/></div>
+        <div class="field"><label>Irrig. D51-70 (mm)</label><input type="number" name="51_70AI(in mm)" value="250" step="0.1"/></div>
+        <div class="field"><label>Lluvia D71-105 (mm)</label><input type="number" name="71_105DRain(in mm)" value="61" step="0.1"/></div>
+        <div class="field"><label>Irrig. D71-105 (mm)</label><input type="number" name="71_105DAI(in mm)" value="64" step="0.1"/></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title"> Temperatura (°C)</div>
+      <div class="form-grid">
+        <div class="field"><label>Temp min D1-30</label><input type="number" name="Min temp_D1_D30" value="18.5" step="0.5"/></div>
+        <div class="field"><label>Temp max D1-30</label><input type="number" name="Max temp_D1_D30" value="34"/></div>
+        <div class="field"><label>Temp min D31-60</label><input type="number" name="Min temp_D31_D60" value="16" step="0.5"/></div>
+        <div class="field"><label>Temp max D31-60</label><input type="number" name="Max temp_D31_D60" value="30"/></div>
+        <div class="field"><label>Temp min D61-90</label><input type="number" name="Min temp_D61_D90" value="15.5" step="0.5"/></div>
+        <div class="field"><label>Temp max D61-90</label><input type="number" name="Max temp_D61_D90" value="31" step="0.5"/></div>
+        <div class="field"><label>Temp min D91-120</label><input type="number" name="Min temp_D91_D120" value="16" step="0.5"/></div>
+        <div class="field"><label>Temp max D91-120</label><input type="number" name="Max temp_D91_D120" value="33" step="0.5"/></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title"> Viento y Humedad</div>
+      <div class="form-grid">
+        <div class="field"><label>Vel. viento D1-30 (knots)</label><input type="number" name="Inst Wind Speed_D1_D30(in Knots)" value="4"/></div>
+        <div class="field"><label>Vel. viento D31-60</label><input type="number" name="Inst Wind Speed_D31_D60(in Knots)" value="10"/></div>
+        <div class="field"><label>Vel. viento D61-90</label><input type="number" name="Inst Wind Speed_D61_D90(in Knots)" value="8"/></div>
+        <div class="field"><label>Vel. viento D91-120</label><input type="number" name="Inst Wind Speed_D91_D120(in Knots)" value="10"/></div>
+        <div class="field">
+          <label>Dir. viento D1-30</label>
+          <select name="Wind Direction_D1_D30"><option>SW</option><option>E</option><option>ENE</option><option>NW</option><option>SSE</option></select>
+        </div>
+        <div class="field">
+          <label>Dir. viento D31-60</label>
+          <select name="Wind Direction_D31_D60"><option>W</option><option>ENE</option><option>NE</option><option>S</option><option>WNW</option></select>
+        </div>
+        <div class="field">
+          <label>Dir. viento D61-90</label>
+          <select name="Wind Direction_D61_D90"><option>NNW</option><option>NE</option><option>NNE</option><option>SE</option><option>SW</option></select>
+        </div>
+        <div class="field">
+          <label>Dir. viento D91-120</label>
+          <select name="Wind Direction_D91_D120"><option>WSW</option><option>NNW</option><option>NW</option><option>S</option><option>SSE</option><option>W</option></select>
+        </div>
+        <div class="field"><label>Humedad relativa D1-30 (%)</label><input type="number" name="Relative Humidity_D1_D30" value="72" step="0.5"/></div>
+        <div class="field"><label>Humedad relativa D31-60</label><input type="number" name="Relative Humidity_D31_D60" value="78"/></div>
+        <div class="field"><label>Humedad relativa D61-90</label><input type="number" name="Relative Humidity_D61_D90" value="88"/></div>
+        <div class="field"><label>Humedad relativa D91-120</label><input type="number" name="Relative Humidity_D91_D120" value="85"/></div>
+      </div>
+    </div>
+
+    <button type="submit" class="predict-btn"> PREDECIR RENDIMIENTO</button>
+  </form>
+
+  <!-- Result -->
+  <div class="result-box" id="resultBox">
+    <span class="section-label">Resultado</span>
+    <div class="result-verdict" id="resultVerdict"></div>
+    <div class="result-sub" id="resultSub"></div>
+    <div class="result-prob" id="resultProb"></div>
+  </div>
+
+</div>
+
+<footer>
+  <span>Paddy Yield Predictor · Predicción Individual</span>
+</footer>
+
+<script src="models/model_data.js"></script>
+<script src="models/model.js"></script>
+<script>
+  let currentModel = 'lr';
+
+  function selectModel(m) {
+    currentModel = m;
+    document.getElementById('btnLR').classList.toggle('active', m === 'lr');
+    document.getElementById('btnNN').classList.toggle('active', m === 'nn');
+    document.getElementById('resultBox').classList.remove('show');
+  }
+
+  function runPredict(e) {
+    e.preventDefault();
+    const form = document.getElementById('predForm');
+    const data = Object.fromEntries(new FormData(form).entries());
+    const result = predict(data, currentModel);
+
+    const box = document.getElementById('resultBox');
+    const verdict = document.getElementById('resultVerdict');
+    const sub = document.getElementById('resultSub');
+    const prob = document.getElementById('resultProb');
+    const modelName = currentModel === 'lr' ? 'Regresión Logística' : 'Red Neuronal Artificial';
+    const pct = (result.prob * 100).toFixed(1);
+    const median = MODEL_DATA.median_yield.toLocaleString('es');
+
+    if (result.pred === 1) {
+      verdict.textContent = ' Rendimiento ALTO';
+      verdict.className = 'result-verdict high';
+      sub.textContent = `Modelo: ${modelName} · Probabilidad: ${pct}% · Umbral: mediana ≥ ${median} Kg`;
+    } else {
+      verdict.textContent = ' Rendimiento BAJO';
+      verdict.className = 'result-verdict low';
+      sub.textContent = `Modelo: ${modelName} · Probabilidad de alto: ${pct}% · Umbral: mediana ${median} Kg`;
+    }
+
+    prob.innerHTML = `
+      <div style="display:flex;align-items:center;gap:1rem;margin-top:1rem;">
+        <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);min-width:120px">P(rendimiento alto)</span>
+        <div class="prob-bar-wrap" style="flex:1">
+          <div class="prob-bar" style="width:${pct}%"></div>
+        </div>
+        <span style="font-family:var(--font-mono);font-size:0.9rem;color:var(--accent);min-width:45px">${pct}%</span>
+      </div>
+    `;
+
+    box.classList.add('show');
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+</script>
+</body>
+</html>
